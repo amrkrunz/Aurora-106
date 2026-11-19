@@ -1,0 +1,62 @@
+name: Build Aurora 106
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-2022
+            artifact: Aurora106-Windows-x64
+          - name: macOS universal
+            os: macos-15
+            artifact: Aurora106-macOS-universal
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DAURORA_BUILD_DSP_TESTS=ON
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
+        run: cmake -S . -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DAURORA_BUILD_DSP_TESTS=ON
+      - name: Build
+        run: cmake --build build --config Release --parallel 3
+      - name: DSP smoke test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package plugins (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $plugins = Get-ChildItem -Path build -Directory -Recurse -Filter "Aurora 106.vst3"
+          if (-not $plugins) { throw "VST3 bundle not found" }
+          Copy-Item -Recurse -Force $plugins[0].FullName dist/
+          $standalone = Get-ChildItem -Path build -File -Recurse -Filter "Aurora 106.exe" | Select-Object -First 1
+          if ($standalone) { Copy-Item $standalone.FullName dist/ }
+          Compress-Archive -Path dist/* -DestinationPath Aurora106-Windows-x64.zip -Force
+      - name: Package plugins (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          VST3=$(find build -type d -name 'Aurora 106.vst3' -print -quit)
+          test -n "$VST3" || { echo 'VST3 bundle not found'; exit 1; }
+          cp -R "$VST3" dist/
+          AU=$(find build -type d -name 'Aurora 106.component' -print -quit)
+          if [ -n "$AU" ]; then cp -R "$AU" dist/; fi
+          APP=$(find build -type d -name 'Aurora 106.app' -print -quit)
+          if [ -n "$APP" ]; then cp -R "$APP" dist/; fi
+          ditto -c -k --sequesterRsrc --keepParent dist Aurora106-macOS-universal.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.zip
+          if-no-files-found: error
