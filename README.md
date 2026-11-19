@@ -70,3 +70,18 @@ The custom Aurora 106 source files are MIT licensed. The build also downloads JU
 - Roland technical specifications: https://support.roland.com/hc/en-us/articles/201966419-JUNO-106-Technical-Specifications
 - Historical single-patch MIDI data: https://www.atarimagazines.com/st-log/issue33/64_1_THE_ST_AND_THE_ROLAND_JUNO_106_SYNTHESIZER.php
 - Roland original factory programs: https://www.roland.com/id/products/rc_juno-106_the_original_128/
+
+
+## Windows compiler fix (19 November 2026)
+
+The 2026-11-19 Windows GitHub Actions log reported `C2131` at
+`Source/PluginEditor.cpp` lines 8–14. JUCE's `Colour(uint32)` constructor is
+not a C++ constant expression under MSVC, so those seven file-scope
+`constexpr auto` colour declarations were changed to `const juce::Colour`.
+The unnecessary `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` flag was also removed
+from the CI commands to eliminate misleading CMake warnings. The unrelated
+JUCE splash-screen warning may still appear; it is nonfatal.
+
+This patch addresses the compile error shown in the submitted Windows log.
+A complete Windows and macOS JUCE plug-in build must still be confirmed by
+rerunning GitHub Actions on the updated repository.

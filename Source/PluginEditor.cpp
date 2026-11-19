@@ -5,13 +5,15 @@ namespace aurora
 {
 namespace
 {
-    constexpr auto panel = juce::Colour(0xff25292e);
-    constexpr auto light = juce::Colour(0xfff0eee2);
-    constexpr auto muted = juce::Colour(0xffa1aab3);
-    constexpr auto orange = juce::Colour(0xfff2a846);
-    constexpr auto red = juce::Colour(0xffd34847);
-    constexpr auto blue = juce::Colour(0xff448abd);
-    constexpr auto rail = juce::Colour(0xff101317);
+    // JUCE's Colour(uint32) constructor is not constexpr in JUCE 8.
+    // File-scope const values are fine; constexpr fails on MSVC (C2131).
+    const juce::Colour panel  { 0xff25292e };
+    const juce::Colour light  { 0xfff0eee2 };
+    const juce::Colour muted  { 0xffa1aab3 };
+    const juce::Colour orange { 0xfff2a846 };
+    const juce::Colour red    { 0xffd34847 };
+    const juce::Colour blue   { 0xff448abd };
+    const juce::Colour rail   { 0xff101317 };
 }
 
 PanelLook::PanelLook()
