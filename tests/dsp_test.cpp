@@ -2,17 +2,19 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <memory>
 #include <vector>
 int main()
 {
-    aurora::SynthEngine synth;
-    synth.prepare(48000);
+    // Chorus delay buffers are large; keep DSP instances off the thread stack.
+    auto synth = std::make_unique<aurora::SynthEngine>();
+    synth->prepare(48000);
     aurora::Settings s;
     s.chorus = 1;
-    synth.setSettings(s);
-    synth.noteOn(60, 1.f);
+    synth->setSettings(s);
+    synth->noteOn(60, 1.f);
     std::vector<float> l(48000), r(48000);
-    synth.render(l.data(), r.data(), (int) l.size());
+    synth->render(l.data(), r.data(), (int) l.size());
     double energy = 0.0, width = 0.0;
     for (size_t i = 0; i < l.size(); ++i)
     {
@@ -22,28 +24,28 @@ int main()
     }
     assert(energy > 0.01);
     assert(width > 0.01);
-    synth.noteOff(60);
+    synth->noteOff(60);
     std::fill(l.begin(), l.end(), 0.f);
     std::fill(r.begin(), r.end(), 0.f);
-    synth.render(l.data(), r.data(), (int) l.size());
-    synth.allNotesOff();
+    synth->render(l.data(), r.data(), (int) l.size());
+    synth->allNotesOff();
 
     // Compare identical deterministic voices with and without wheel modulation.
     // This checks that wheels actually affect generated samples, not just the GUI.
     auto wheelRender = [](int bend, int mod)
     {
-        aurora::SynthEngine e;
-        e.prepare(48000);
+        auto e = std::make_unique<aurora::SynthEngine>();
+        e->prepare(48000);
         aurora::Settings x;
         x.chorus = 0;
         x.dcoLfo = 0;
         x.lfoRate = .55f;
-        e.setSettings(x);
-        e.pitchWheel(bend);
-        e.modulationWheel(mod);
-        e.noteOn(60, 1.f);
+        e->setSettings(x);
+        e->pitchWheel(bend);
+        e->modulationWheel(mod);
+        e->noteOn(60, 1.f);
         std::vector<float> left(12000), right(12000);
-        e.render(left.data(), right.data(), (int)left.size());
+        e->render(left.data(), right.data(), (int)left.size());
         return left;
     };
     const auto plain = wheelRender(8192, 0);

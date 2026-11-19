@@ -85,3 +85,7 @@ JUCE splash-screen warning may still appear; it is nonfatal.
 This patch addresses the compile error shown in the submitted Windows log.
 A complete Windows and macOS JUCE plug-in build must still be confirmed by
 rerunning GitHub Actions on the updated repository.
+
+
+### Windows DSP smoke-test crash fix (2026-11-19)
+The standalone DSP smoke test now heap-allocates the SynthEngine instances, avoiding a thread-stack overflow when the chorus delay buffers exceed the Windows default stack budget. The previous test was reproduced crashing with a 1 MiB stack limit; the corrected test passes under the same limit. This change affects the test harness, not synthesizer audio behavior.
